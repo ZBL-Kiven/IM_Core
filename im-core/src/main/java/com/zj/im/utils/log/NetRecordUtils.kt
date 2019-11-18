@@ -1,6 +1,7 @@
 package com.zj.im.utils.log
 
 import com.zj.im.BuildConfig
+import com.zj.im.chat.utils.MainLooper
 import com.zj.im.utils.full
 import com.zj.im.utils.log.logger.DataUtils
 import com.zj.im.utils.log.logger.LogCollectionUtils
@@ -118,7 +119,9 @@ internal object NetRecordUtils : LogCollectionUtils.Config() {
         info.lastModifyTime = full()
         val recordString = DataUtils.toString(info)
         changedListeners.forEach { (_, v) ->
-            v.onChanged(info)
+            MainLooper.post {
+                v.onChanged(info)
+            }
         }
         write(recordString, false)
     }

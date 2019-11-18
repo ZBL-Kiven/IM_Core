@@ -16,7 +16,7 @@ import java.lang.NullPointerException
  */
 
 @Suppress("unused")
-internal sealed class LogCollectionUtils {
+sealed class LogCollectionUtils {
 
     companion object {
         const val TAG = "com.zj.LogUtils:println %s"

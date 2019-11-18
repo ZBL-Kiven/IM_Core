@@ -89,8 +89,12 @@ object IConnectivityManager {
     }
 
     private fun clearRegister(context: Application?) {
-        connectivityManager?.unregisterNetworkCallback(netCallBack)
-        context?.unregisterReceiver(netWorkBrodCast)
+        try {
+            connectivityManager?.unregisterNetworkCallback(netCallBack)
+            context?.unregisterReceiver(netWorkBrodCast)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun shutDown(context: Application?) {

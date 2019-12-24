@@ -42,16 +42,7 @@ import com.zj.im.utils.log.logger.printInFile
  * @param buildOption made some rules to sdk , {@see OnBuildOption}
  */
 
-class BaseOption<OUT : Any> internal constructor(
-    val context: Application,
-    private val notification: Notification? = null,
-    private val sessionId: Int?,
-    private val runtimeEfficiency: RuntimeEfficiency,
-    val logsCollectionAble: () -> Boolean,
-    val logsFileName: String,
-    val logsMaxRetain: Long,
-    val buildOption: OnBuildOption<OUT>
-) : IMLifecycleListener, AppLayerState {
+class BaseOption<OUT : Any> internal constructor(val context: Application, private val notification: Notification? = null, private val sessionId: Int?, private val runtimeEfficiency: RuntimeEfficiency, val logsCollectionAble: () -> Boolean, val logsFileName: String, val logsMaxRetain: Long, val debugEnable: Boolean, val buildOption: OnBuildOption<OUT>) : IMLifecycleListener, AppLayerState {
 
     companion object {
         @Suppress("unused")
@@ -104,9 +95,7 @@ class BaseOption<OUT : Any> internal constructor(
         DataStore.canSend { return@canSend getClient("canSend")?.canSend() ?: false }
         DataStore.canReceive { return@canReceive getClient("canReceive")?.canReceived() ?: false }
         DataStore.isHeartBeatsOrAuthResponse {
-            return@isHeartBeatsOrAuthResponse getClient("isHeartBeatsOrAuthResponse")?.filterHeartBeatsOrAuthResponse(
-                it
-            ) ?: Triple(first = false, second = false, third = null)
+            return@isHeartBeatsOrAuthResponse getClient("isHeartBeatsOrAuthResponse")?.filterHeartBeatsOrAuthResponse(it) ?: Triple(first = false, second = false, third = null)
         }
         initMsgHandler(runningKey)
     }
@@ -124,10 +113,7 @@ class BaseOption<OUT : Any> internal constructor(
     internal fun setFrequency(runtimeEfficiency: RuntimeEfficiency) {
         if (runtimeEfficiency.interval == curEfficiency) return
         curEfficiency = runtimeEfficiency.interval
-        printInFile(
-            "BaseOption.onFrequencyChanged",
-            "the SDK work efficiency has been changed to level-${runtimeEfficiency.name}"
-        )
+        printInFile("BaseOption.onFrequencyChanged", "the SDK work efficiency has been changed to level-${runtimeEfficiency.name}")
         MsgHandler.setFrequency(curEfficiency)
     }
 
@@ -222,10 +208,7 @@ class BaseOption<OUT : Any> internal constructor(
         } else {
             arrayOf("background", "foreground")
         }
-        printInFile(
-            "BaseOption.onLayerChanged",
-            "the task running changed form ${changedNames[0]} to ${changedNames[1]} "
-        )
+        printInFile("BaseOption.onLayerChanged", "the task running changed form ${changedNames[0]} to ${changedNames[1]} ")
         notification?.let {
             val service = getServer("BaseOption.onLayerChanged")?.getService("onLayerChanged", true)
             if (background) {

@@ -23,8 +23,6 @@ internal val logUtils = object : LogCollectionUtils.Config() {
         get() = { today() }
     override val fileName: () -> String
         get() = { now() }
-    override val debugEnable: () -> Boolean
-        get() = { BuildConfig.DEBUG }
 }
 
 internal fun e(where: String, s: String) {

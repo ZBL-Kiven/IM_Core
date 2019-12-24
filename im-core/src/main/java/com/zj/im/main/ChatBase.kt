@@ -55,22 +55,17 @@ internal object ChatBase {
         this.context = options.context
         this.options = options
         onErrorCallBack = { options.buildOption.onError(it) }
-        initBase(options.logsCollectionAble, options.logsFileName, options.logsMaxRetain, context)
+        initBase(options.debugEnable, options.logsCollectionAble, options.logsFileName, options.logsMaxRetain, context)
         options.init(runningKey)
         initUtils()
         isInit = true
         options.buildOption.prepare()
     }
 
-    private fun initBase(
-        logsCollectionAble: () -> Boolean,
-        logsFileName: String,
-        logsMaxRetain: Long,
-        context: Application?
-    ) {
+    private fun initBase(debugEnable: Boolean, logsCollectionAble: () -> Boolean, logsFileName: String, logsMaxRetain: Long, context: Application?) {
         diskPathName = logsFileName
-        logUtils.init(context, logsFileName, logsCollectionAble, logsMaxRetain)
-        NetRecordUtils.init(context, logsFileName, logsCollectionAble, logsMaxRetain)
+        logUtils.init(context, logsFileName, debugEnable, logsCollectionAble, logsMaxRetain)
+        NetRecordUtils.init(context, logsFileName, debugEnable, logsCollectionAble, logsMaxRetain)
         ToastUtils.init(context)
         TimeOutUtils.init()
     }
@@ -89,10 +84,7 @@ internal object ChatBase {
         if (!isInit) {
             DataStore.clear()
             SendingPool.clear()
-            printInFile(
-                "ChatBase.IM.checkInit",
-                " when $name ,the IM SDK is not init by IMInterface.class or extends class?"
-            )
+            printInFile("ChatBase.IM.checkInit", " when $name ,the IM SDK is not init by IMInterface.class or extends class?")
         }
     }
 
@@ -100,10 +92,7 @@ internal object ChatBase {
         when (e) {
             is LooperInterruptedException -> {
                 if (!isFinishing(curRunningKey)) options?.initMsgHandler(curRunningKey)
-                else printInFile(
-                    "ChatBase.IM.LooperInterrupted",
-                    " the MsgLooper was stopped by SDK shutDown"
-                )
+                else printInFile("ChatBase.IM.LooperInterrupted", " the MsgLooper was stopped by SDK shutDown")
             }
             is AuthFailException -> {
                 correctConnectionState(SocketState.CONNECTED_ERROR, e.case)
@@ -183,8 +172,7 @@ internal object ChatBase {
                 val zipName = "$zipFileName.zip"
                 compressToZip(path, zipPath, zipName)
                 val zipFile = File(zipPath, zipName)
-                if (zipFile.exists() && zipFile.isFile)
-                    return zipFile.path
+                if (zipFile.exists() && zipFile.isFile) return zipFile.path
             }
         }
         return ""

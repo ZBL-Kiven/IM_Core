@@ -24,9 +24,6 @@ internal object NetRecordUtils : LogCollectionUtils.Config() {
         get() = { path }
     override val fileName: () -> String
         get() = { name }
-    override val debugEnable: () -> Boolean
-        get() = { BuildConfig.DEBUG }
-
     private val changedListeners = mutableMapOf<String, TCPNetRecordChangedListener>()
 
     @JvmStatic

@@ -23,6 +23,7 @@ import com.zj.im.persistence.DBListener
 import com.zj.im.sender.SendObject
 import com.zj.im.utils.Constance
 import com.zj.im.utils.log.NetRecordUtils
+import com.zj.im.utils.log.logger.logUtils
 import com.zj.im.utils.log.logger.printInFile
 import com.zj.im.utils.nio
 import kotlin.math.max
@@ -88,45 +89,25 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
                     pingTime = System.currentTimeMillis()
                 }
                 SocketState.AUTH_SUCCESS -> {
-                    pongTime = 0L;isSending = false;authentication =
-                        false;TimeOutUtils.remove(AUTH_TIME_OUT_CALL_ID);isAuth = true;startHeartBeats();onPause(
-                        OVERRIDE_AUTH_CODE
-                    ); onAuthSuccess {
-                        onResume(OVERRIDE_AUTH_CODE); if (!it) setCurState(
-                        SocketState.CONNECTED_ERROR,
-                        Constance.AUTH_INTERRUPTED
-                    )
+                    pongTime = 0L;isSending = false;authentication = false;TimeOutUtils.remove(AUTH_TIME_OUT_CALL_ID);isAuth = true;startHeartBeats();onPause(OVERRIDE_AUTH_CODE); onAuthSuccess {
+                        onResume(OVERRIDE_AUTH_CODE); if (!it) setCurState(SocketState.CONNECTED_ERROR, Constance.AUTH_INTERRUPTED)
                     }
                 }
                 SocketState.SEND_AUTH -> isAuth = false
                 SocketState.CONNECTED -> {
                     connection = false;onPause(OVERRIDE_CONNECTED_CODE);sendAuth();onConnected {
-                        if (!it) setCurState(
-                            SocketState.CONNECTED_ERROR,
-                            Constance.CONNECTING_INTERRUPTED
-                        );onResume(OVERRIDE_CONNECTED_CODE)
+                        if (!it) setCurState(SocketState.CONNECTED_ERROR, Constance.CONNECTING_INTERRUPTED);onResume(OVERRIDE_CONNECTED_CODE)
                     }
                 }
-                SocketState.NETWORK_STATE_CHANGE, SocketState.DISCONNECTED, SocketState.CONNECTED_ERROR -> conn(
-                    DEFAULT_RECONNECT_TIME
-                )
+                SocketState.NETWORK_STATE_CHANGE, SocketState.DISCONNECTED, SocketState.CONNECTED_ERROR -> conn(DEFAULT_RECONNECT_TIME)
                 else -> {
                 }
             }
             ChatBase.onSocketStatusChanged(onSocketStateChanged(curSocketState))
             when (value) {
-                SocketState.PING -> printInFile(
-                    "on socket status change ----- ",
-                    "--- $value -- ${nio(pingTime)}"
-                )
-                SocketState.PONG -> printInFile(
-                    "on socket status change ----- ",
-                    "--- $value -- ${nio(pongTime)}"
-                )
-                SocketState.CONNECTED_ERROR -> printInFile(
-                    "on socket status change ----- ",
-                    "$value  ==> reconnection with error : ${value.case}"
-                )
+                SocketState.PING -> printInFile("on socket status change ----- ", "--- $value -- ${nio(pingTime)}")
+                SocketState.PONG -> printInFile("on socket status change ----- ", "--- $value -- ${nio(pongTime)}")
+                SocketState.CONNECTED_ERROR -> printInFile("on socket status change ----- ", "$value  ==> reconnection with error : ${value.case}")
                 SocketState.AUTH_SUCCESS -> NetRecordUtils.recordDisconnectCount()
                 else -> printInFile("on socket status change ----- ", "$value")
             }
@@ -191,13 +172,7 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
             return
         } else {
             authentication = true
-            TimeOutUtils.putASentMessage(
-                AUTH_TIME_OUT_CALL_ID,
-                hashMapOf(),
-                max(DEFAULT_AUTH_TIME, authTime),
-                false,
-                isIgnoreConnecting = true
-            )
+            TimeOutUtils.putASentMessage(AUTH_TIME_OUT_CALL_ID, hashMapOf(), max(DEFAULT_AUTH_TIME, authTime), false, isIgnoreConnecting = true)
             DataStore.put(BaseMsgInfo.auth(AUTH_TIME_OUT_CALL_ID, authBuilder?.params))
         }
     }
@@ -278,8 +253,7 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
             ChatBase.options?.onNetWorkStateChanged(netWorkState)
             when (netWorkState) {
                 NetWorkInfo.DISCONNECTED, NetWorkInfo.CONNECTED -> {
-                    if ((netWorkState == NetWorkInfo.CONNECTED && canConnect() && !curSocketState.isConnected()) || netWorkState == NetWorkInfo.DISCONNECTED)
-                        setCurState(SocketState.NETWORK_STATE_CHANGE, "on network changed")
+                    if ((netWorkState == NetWorkInfo.CONNECTED && canConnect() && !curSocketState.isConnected()) || netWorkState == NetWorkInfo.DISCONNECTED) setCurState(SocketState.NETWORK_STATE_CHANGE, "on network changed")
                 }
                 else -> {
                 }
@@ -354,11 +328,15 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
     }
 
     open fun canReceived(): Boolean {
-        return !isPause && !isShutdown && !isReceiving && !connection
+        val canReceive = !isPause && !isShutdown && !isReceiving && !connection
+        if (!canReceive) logUtils.d("MessageHubClient", "received enable = $canReceive  ,case : isPause = $isPause && isShutdown = $isShutdown && isReceiving = $isReceiving && connection = $connection")
+        return canReceive
     }
 
     open fun canSend(): Boolean {
-        return isAuth && !isShutdown && !isSending && !authentication && !connection
+        val canSend = isAuth && !isShutdown && !isSending && !authentication && !connection
+        if (!canSend) logUtils.d("MessageHubClient", "send enable = $canSend  ,case : isAuth = $isAuth && isShutdown = $isShutdown && isSending = $isSending && authentication = $authentication && connection = $connection")
+        return canSend
     }
 
     open fun canAuth(): Boolean {
@@ -371,14 +349,12 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
 
     fun onPause(code: Int) {
         printInFile("on pause called ", "${overrideType(code)} --- onPause")
-        isPause = true;lifecycleType =
-            IMLifecycle(LifeType.PAUSE, code)
+        isPause = true;lifecycleType = IMLifecycle(LifeType.PAUSE, code)
     }
 
     fun onResume(code: Int) {
         printInFile("on resume called ", "${overrideType(code)} --- onResume")
-        isPause = false;lifecycleType =
-            IMLifecycle(LifeType.RESUME, code)
+        isPause = false;lifecycleType = IMLifecycle(LifeType.RESUME, code)
     }
 
     internal fun overrideOnConnected(obj: (isContinue: (Boolean) -> Unit) -> Unit) {
@@ -396,8 +372,7 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
         DataStore.shutDown()
     }
 
-    private fun isHeartbeatsBuilder(response: Map<String, Any>?) =
-        heartbeatsBuilder?.onParsedHeartbeatsReceiver?.invoke(response) == true
+    private fun isHeartbeatsBuilder(response: Map<String, Any>?) = heartbeatsBuilder?.onParsedHeartbeatsReceiver?.invoke(response) == true
 
     private fun authBuilderStatus(response: Map<String, Any>?) = authBuilder?.onParsedAuthReceiver?.invoke(response)
 

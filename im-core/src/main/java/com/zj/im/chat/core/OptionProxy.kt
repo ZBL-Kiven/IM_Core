@@ -38,8 +38,9 @@ class OptionProxy internal constructor(private val context: Application) {
         return this
     }
 
-    fun debug() {
+    fun debug(): OptionProxy {
         debugEnable = true
+        return this
     }
 
     fun setLogsMaxRetain(maxRetain: Long): OptionProxy {

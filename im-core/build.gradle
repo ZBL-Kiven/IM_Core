@@ -14,7 +14,7 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'org.msgpack:msgpack:0.6.12'
-    implementation 'org.msgpack:jackson-dataformat-msgpack:0.8.17'
+    implementation 'org.msgpack:jackson-dataformat-msgpack:0.8.20'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
 apply from:"upload.gradle"

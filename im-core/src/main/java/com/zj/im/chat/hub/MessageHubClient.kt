@@ -74,6 +74,9 @@ abstract class MessageHubClient<T> : BaseMessageHub() {
                     pongTime = System.currentTimeMillis()
                 }
                 SocketState.PING -> {
+                    if(!ChatBase.isNetWorkAccess){
+                        ChatBase.checkNetWork()
+                    }
                     val curTime = System.currentTimeMillis()
                     val outOfTime = heartBeatsTime * 3f
                     val lastPingTime = curTime - pingTime - heartBeatsTime

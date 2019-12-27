@@ -80,6 +80,20 @@ internal object ChatBase {
         AppHiddenListener.init(context) { onLayerChanged(true) }
     }
 
+    private fun onLayerChanged(isHidden: Boolean) {
+        if (isHidden != isRunningInBackground) {
+            checkNetWork()
+            options?.onLayerChanged(isHidden)
+        }
+    }
+
+    private fun netWorkStateChanged(state: NetWorkInfo) {
+        printInFile("ChatBase.IM", "the SDK checked the network status changed form ${if (isNetWorkAccess) "enable" else "disable"} by net State : ${state.name}")
+        isNetWorkAccess = state == NetWorkInfo.CONNECTED
+        if (!isNetWorkAccess) isTcpConnected = false
+        DataStore.put(BaseMsgInfo.networkStateChanged(state))
+    }
+
     fun checkInit(name: String) {
         if (!isInit) {
             DataStore.clear()
@@ -124,22 +138,13 @@ internal object ChatBase {
         DataStore.put(BaseMsgInfo.connectStateChange(state, case))
     }
 
-    private fun onLayerChanged(isHidden: Boolean) {
-        if (isHidden != isRunningInBackground) {
-            netWorkStateChanged(IConnectivityManager.isNetWorkActive)
-            options?.onLayerChanged(isHidden)
-        }
-    }
-
     fun onSocketStatusChanged(socketState: SocketState) {
         this.isTcpConnected = socketState.isConnected()
         options?.onSocketConnStateChange(socketState)
     }
 
-    private fun netWorkStateChanged(state: NetWorkInfo) {
-        isNetWorkAccess = state == NetWorkInfo.CONNECTED
-        if (!isNetWorkAccess) isTcpConnected = false
-        DataStore.put(BaseMsgInfo.networkStateChanged(state))
+    fun checkNetWork() {
+        IConnectivityManager.checkNetWorkValidate()
     }
 
     fun show(s: String) {

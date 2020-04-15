@@ -23,6 +23,9 @@
 
 ## Features：
 
+> 配置：
+*支持 配置后端协议 （socket、webSocket 等）
+
 > 启动：随时一键 启动/停止 核心服务。
 
 * 兼容重复启动
@@ -147,9 +150,9 @@ copy the aar file in your app libs to use
 > by [module](https://github.com/ZBL-Kiven/iM-Core/archive/master.zip) copy:
  
 ```
-copy the module 'zj_loading' into your app
+copy the module 'im-core' into your app
 
-implementation project(":zj_loading")
+implementation project(":im-core")
 
 ```
 

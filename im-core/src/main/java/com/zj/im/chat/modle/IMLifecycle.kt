@@ -7,7 +7,7 @@ import com.zj.im.chat.enums.LifeType
  *
  * the current status in sdk
  *
- * @param type see {@link #LifeType}
+ * @param type see {@link [LifeType]}
  *
  * @param what when the specially lifecycle called as onPause / onResume
  *
@@ -15,5 +15,5 @@ import com.zj.im.chat.enums.LifeType
  *
  **/
 
-data class IMLifecycle(val type: LifeType, val what: Int)
+data class IMLifecycle(val type: LifeType, val what: String)
 

@@ -1,61 +1,53 @@
 package com.zj.im.sender
 
-import android.accounts.NetworkErrorException
-import com.zj.im.chat.enums.SendMsgState
-import com.zj.im.chat.exceptions.ExceptionHandler
-import com.zj.im.chat.core.DataStore
-import com.zj.im.chat.interfaces.BaseMsgInfo
-import com.zj.im.chat.interfaces.SendReplyCallBack
-import com.zj.im.chat.utils.TimeOutUtils
-import com.zj.im.main.ChatBase
-import com.zj.im.utils.log.NetRecordUtils
+import com.zj.im.chat.hub.ServerHub
+import com.zj.im.chat.modle.BaseMsgInfo
+import com.zj.im.chat.interfaces.SendingCallBack
+import com.zj.im.chat.modle.SendingUp
+import com.zj.im.utils.TimeOutUtils
+import com.zj.im.main.dispatcher.DataReceivedDispatcher
+import java.lang.NullPointerException
 
 /**
  * Created by ZJJ
  */
+internal class SendExecutors<T>(info: BaseMsgInfo<T>, server: ServerHub<T>?, done: SendExecutorsInterface<T>) {
 
-internal object SendExecutors {
-
-    fun send(sendObject: SendObject, done: () -> Unit) {
+    init {
+        var exc: Throwable? = null
+        val pl = info.sendingState?.getSpecialBody()
         try {
-            when {
-                sendObject.getSendingUpState() == SendingUp.CANCEL -> {
-                    try {
-                        sendingFail(sendObject, NetworkErrorException(""))
-                    } finally {
-                        done()
-                    }
+            when (info.sendingUp) {
+                SendingUp.CANCEL -> {
+                    clearTimeout(info.callId)
+                    done.result(isOK = false, retryAble = false, d = info, throwable = exc, payloadInfo = pl)
                 }
                 else -> {
-                    NetRecordUtils.recordSendCount()
-                    TimeOutUtils.putASentMessage(sendObject.getCallId(), sendObject.getParams(), sendObject.getTimeOut(), sendObject.isResend())
-                    ChatBase.options?.getServer("SendExecutors.send")?.sendToSocket(sendObject, object : SendReplyCallBack {
-                        override fun onReply(isSuccess: Boolean, sendObject: SendObject, e: Throwable?) {
-                            try {
-                                if (!isSuccess) {
-                                    if (!(ChatBase.isNetWorkAccess && ChatBase.isTcpConnected)) {
-                                        TimeOutUtils.remove(sendObject.getCallId())
-                                        DataStore.put(BaseMsgInfo.sendMsg(sendObject))
-                                        return
-                                    }
-                                    sendingFail(sendObject, e)
-                                }
-                            } finally {
-                                done()
-                            }
+                    val data = info.data ?: throw NullPointerException("what's the point you are sending an empty message?")
+                    TimeOutUtils.putASentMessage(info.callId, info.data, info.timeOut, info.isResend, info.ignoreConnecting)
+                    server?.sendToServer(data, info.callId, object : SendingCallBack<T> {
+                        override fun result(isOK: Boolean, d: T?, retryAble: Boolean, throwable: Throwable?, payloadInfo: Any?) {
+                            exc = throwable
+                            clearTimeout(info.callId)
+                            val canRetry = retryAble && !DataReceivedDispatcher.isDataEnable()
+                            info.data = if ((!isOK && canRetry) || d == null) data else d
+                            done.result(isOK && d != null, canRetry, info, exc, payloadInfo)
                         }
-                    })
+                    }) ?: throw NullPointerException("server can not be null !!")
                 }
             }
         } catch (e: Exception) {
-            done()
-            ExceptionHandler.postError(e)
+            exc = e
+            clearTimeout(info.callId)
+            done.result(false, retryAble = false, d = info, throwable = exc, payloadInfo = pl)
         }
     }
 
-    private fun sendingFail(sendObject: SendObject, e: Throwable?) {
-        ExceptionHandler.postError(e)
-        TimeOutUtils.remove(sendObject.getCallId())
-        DataStore.put(BaseMsgInfo.sendingStateChange(SendMsgState.FAIL, sendObject.getCallId(), sendObject.getParams(), sendObject.isResend()))
+    private fun clearTimeout(callId: String) {
+        TimeOutUtils.remove(callId)
+    }
+
+    internal interface SendExecutorsInterface<T> {
+        fun result(isOK: Boolean, retryAble: Boolean, d: BaseMsgInfo<T>, throwable: Throwable?, payloadInfo: Any?)
     }
 }

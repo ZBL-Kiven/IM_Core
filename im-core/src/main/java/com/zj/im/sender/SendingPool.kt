@@ -1,116 +1,122 @@
 package com.zj.im.sender
 
-import com.zj.im.chat.core.DataStore
-import com.zj.im.chat.exceptions.ExceptionHandler
-import com.zj.im.chat.interfaces.BaseMsgInfo
-import com.zj.im.chat.interfaces.RunningObserver
-import com.zj.im.main.ChatBase
+import com.zj.im.chat.enums.SendMsgState
+import com.zj.im.chat.exceptions.IMException
+import com.zj.im.chat.modle.BaseMsgInfo
+import com.zj.im.chat.modle.SendingUp
+import com.zj.im.main.dispatcher.DataReceivedDispatcher
 import com.zj.im.utils.cusListOf
-import java.lang.Exception
+import com.zj.im.utils.log.logger.printInFile
 
 /**
  * Created by ZJJ
  */
-
-internal object SendingPool : RunningObserver() {
-
-    fun init() {
-        clear()
-    }
+internal class SendingPool<T> : OnStatus<T> {
 
     private var sending = false
 
-    override fun run(runningKey: String) {
-        if (!sending) {
-            sending = true
-            if (!ChatBase.isFinishing(runningKey)) {
-                pop()?.let {
-                    SendExecutors.send(it) {
-                        sending = false
-                    }
-                    return
-                }
-            }
-            sending = false
+    private val sendMsgQueue = cusListOf<BaseMsgInfo<T>>()
+
+    fun push(info: BaseMsgInfo<T>) {
+        sendMsgQueue.add(info)
+        if (info.onSendBefore.isNullOrEmpty().not()) {
+            info.onSendBefore?.poll()?.call(this)
         }
     }
 
-    private val sendMsgQueue = cusListOf<SendObject>()
-
-    private val onProgressCover: (progress: Int, callId: String) -> Unit = { progress, callId ->
-        DataStore.put(BaseMsgInfo.onProgressChange(progress, callId))
+    fun lock() {
+        sending = true
     }
 
-    private val onSendBeforeEnd: (isContinue: Boolean, callId: String) -> Unit = { isContinue, callId ->
-        val sendState = if (isContinue) SendingUp.READY else if (isStopHandleMsg) SendingUp.WAIT else SendingUp.CANCEL
-        sendMsgQueue.getFirst { obj -> obj.getCallId() == callId }?.apply {
-            this.setSendingUpState(sendState)
-            if (isContinue) this.removeSendingBefore()
-        }
+    fun unLock() {
+        sending = false
     }
 
-    fun push(sendObject: SendObject) {
-        sendMsgQueue.add(sendObject)
-        if (sendObject.isOverrideSendingBefore()) sendObject.getSendBefore()?.onSendBefore(onProgressCover, onSendBeforeEnd)
-    }
-
-    private fun pop(): SendObject? {
+    fun pop(): BaseMsgInfo<T>? {
+        if (sending) return null
         if (sendMsgQueue.isEmpty()) return null
-        if (isStopHandleMsg) {
-            sendMsgQueue.mapTo(true) { BaseMsgInfo.sendMsg(it, true) }.forEach {
-                DataStore.put(it)
-            }
+        if (!DataReceivedDispatcher.isDataEnable()) {
+            val grouped = sendMsgQueue.group {
+                it.ignoreConnecting
+            } ?: return null
             sendMsgQueue.clear()
-            return null
+            sendMsgQueue.addAll(grouped[true])
+            grouped[false]?.forEach { ds ->
+                ds.joinInTop = true
+                DataReceivedDispatcher.pushData(ds)
+            }
+            if (sendMsgQueue.isEmpty()) return null
         }
         var firstInStay = sendMsgQueue.getFirst()
-        if (firstInStay?.getSendingUpState() == SendingUp.WAIT) {
+        if (firstInStay?.sendingUp == SendingUp.WAIT) {
             firstInStay = sendMsgQueue.getFirst {
-                it.getSendingUpState() == SendingUp.NORMAL
+                it.sendingUp == SendingUp.NORMAL
             }
         }
         firstInStay?.let {
-            if (checkAndPop(it.getSendingUpState() == SendingUp.CANCEL)) {
-                sendMsgQueue.remove(it)
-                return it
-            }
+            sendMsgQueue.remove(it)
+            return it
         }
         return null
-    }
-
-    private fun checkAndPop(isCancel: Boolean): Boolean {
-        if (!isCancel) return true
-        try {
-            return ChatBase.options?.buildOption?.checkNetWorkIsWorking() ?: true
-        } catch (ignored: Exception) {
-            ExceptionHandler.postError(ignored)
-        }
-        return false
     }
 
     fun deleteFormQueue(callId: String?) {
         callId?.let {
             sendMsgQueue.removeIf { m ->
-                m.getCallId() == callId
+                m.callId == callId
             }
         }
     }
 
-    fun queryInSendingQueue(predicate: (SendObject) -> Boolean): Boolean {
+    fun queryInSendingQueue(predicate: (BaseMsgInfo<T>) -> Boolean): Boolean {
         return sendMsgQueue.contains(predicate)
-    }
-
-    override fun getTotal(): Int {
-        return try {
-            sendMsgQueue.count
-        } catch (e: Exception) {
-            ExceptionHandler.postError(e)
-            0
-        }
     }
 
     fun clear() {
         sendMsgQueue.clear()
         sending = false
+    }
+
+    override fun call(callId: String, data: T) {
+        printInFile("SendExecutors.send", "$callId before sending task success")
+        sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+            if (onSendBefore.isNullOrEmpty()) {
+                this.sendingUp = SendingUp.READY
+                this.data = data
+                val sendState = SendMsgState.ON_SEND_BEFORE_END
+                val notifyState = BaseMsgInfo.sendingStateChange(sendState, callId, data, isResend, sendWithoutState)
+                DataReceivedDispatcher.pushData(notifyState)
+            } else {
+                this.onSendBefore?.poll()?.call(this@SendingPool)
+            }
+        }
+    }
+
+    override fun error(callId: String, data: T?, e: Throwable?, payloadInfo: Any?) {
+        if (e != null) {
+            val ime = if (e is IMException) {
+                val body = e.getBodyData()
+                IMException("SendExecutors.send $callId before sending task error,case:\n${e.message}\n payload = $payloadInfo", body)
+            } else {
+                IMException("SendExecutors.send $callId before sending task error,case:\n${e.message}\n payload = $payloadInfo", e)
+            }
+            DataReceivedDispatcher.postError(ime)
+        }
+        sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+            if (data != null) this.data = data
+            this.sendingUp = SendingUp.CANCEL
+            this.onSendBefore?.clear()
+            this.onSendBefore = null
+            this.sendingState = SendMsgState.FAIL.setSpecialBody(payloadInfo)
+        }
+    }
+
+    override fun onProgress(callId: String, progress: Int) {
+        sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+            customSendingCallback?.let {
+                it.onSendingUploading(progress, sendWithoutState, callId)
+                if (it.pending) DataReceivedDispatcher.pushData(BaseMsgInfo.onProgressChange<T>(progress, callId))
+            } ?: DataReceivedDispatcher.pushData(BaseMsgInfo.onProgressChange<T>(progress, callId))
+        }
     }
 }

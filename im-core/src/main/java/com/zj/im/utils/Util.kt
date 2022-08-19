@@ -1,8 +1,7 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "MemberVisibilityCanBePrivate")
 
 package com.zj.im.utils
 
-import com.zj.im.chat.exceptions.ExceptionHandler
 import com.zj.im.chat.exceptions.ParamPathNotFoundException
 import java.text.SimpleDateFormat
 import java.util.*
@@ -36,8 +35,8 @@ fun <T : Any> getValidate(vararg params: T?, predicate: (T?) -> Boolean): T? {
     return null
 }
 
-internal fun <R : Any> R?.runSync(block: (R) -> Unit) {
-    this?.let {
+internal fun <R : Any, T> R?.runSync(block: (R) -> T?): T? {
+    return this?.let {
         synchronized(it) {
             block(it)
         }
@@ -74,7 +73,7 @@ internal class CustomList<OUT> {
 
     val count: Int; get() = lst.size
 
-    fun contains(element: OUT?): Boolean? {
+    fun contains(element: OUT?): Boolean {
         synchronized(lst) {
             return isNotEmpty() && lst.contains(element ?: return false)
         }
@@ -99,18 +98,27 @@ internal class CustomList<OUT> {
     }
 
     fun add(index: Int, element: OUT?) {
-        if (element != null && index in 0 until lst.lastIndex)
-            lst.runSync {
-                it.add(index, element)
-            }
+        if (element != null && index in 0 until lst.lastIndex) lst.runSync {
+            it.add(index, element)
+        }
     }
 
     fun addOnly(element: OUT?) {
-        if (element != null)
-            lst.runSync {
-                it.clear()
+        if (element != null) lst.runSync {
+            it.clear()
+            it.add(element)
+        }
+    }
+
+    fun addOrSet(element: OUT, predicate: (other: OUT) -> Boolean) {
+        lst.runSync {
+            val index = it.indexOfFirst(predicate)
+            if (index > 0) {
+                it[index] = element
+            } else {
                 it.add(element)
             }
+        }
     }
 
     fun addIf(element: OUT?, index: Int = -1, predicate: (`in`: OUT, other: OUT) -> Boolean) {
@@ -125,7 +133,7 @@ internal class CustomList<OUT> {
     }
 
     fun <R : Comparable<R>> sort(selector: (OUT) -> R) {
-        lst.sortBy(selector)
+        lst.runSync { it.sortBy(selector) }
     }
 
     fun addAll(elements: Collection<OUT>?) {
@@ -155,6 +163,23 @@ internal class CustomList<OUT> {
         }
     }
 
+    fun forEachSafely(block: (MutableIterator<OUT>) -> Unit) {
+        lst.runSync { lst ->
+            if (!lst.isNullOrEmpty()) {
+                val each = lst.iterator()
+                while (each.hasNext()) {
+                    block(each)
+                }
+            }
+        }
+    }
+
+    fun group(predicate: (i: OUT) -> Boolean): Map<Boolean, List<OUT>>? {
+        return lst.runSync {
+            it.groupBy(predicate)
+        }
+    }
+
     fun remove(element: OUT?) {
         lst.runSync {
             if (isNotEmpty()) it.remove(element)
@@ -169,6 +194,10 @@ internal class CustomList<OUT> {
         }
     }
 
+    fun any(predicate: (OUT) -> Boolean): Boolean {
+        return lst.any(predicate)
+    }
+
     fun <R : Any> mapTo(asReversed: Boolean = false, transfer: (OUT) -> R): MutableList<R> {
         return synchronized(lst) { (if (asReversed) copyOf().asReversed() else copyOf()).mapNotNullTo(mutableListOf(), transfer) }
     }
@@ -179,7 +208,7 @@ internal class CustomList<OUT> {
 
     fun printList(joinWith: (OUT) -> CharSequence): String {
         synchronized(lst) {
-            return lst.asSequence().joinToString(", ", "", "", -1, "...", joinWith)
+            return lst.joinToString(", ", "", "", -1, "...", joinWith)
         }
     }
 
@@ -268,15 +297,12 @@ class MutableParamsMap {
                 getNamesMap(p, index + 1)
             }
         }
-        try {
-            val sub = getNamesMap(this)
-            if (sub != null) {
-                sub.curTransactionKey = sub.transactionKey
-                block(sub)
-                sub.transactionKey = getIncrementKey()
-            }
-        } catch (e: Exception) {
-            ExceptionHandler.postError(e)
+
+        val sub = getNamesMap(this)
+        if (sub != null) {
+            sub.curTransactionKey = sub.transactionKey
+            block(sub)
+            sub.transactionKey = getIncrementKey()
         }
     }
 

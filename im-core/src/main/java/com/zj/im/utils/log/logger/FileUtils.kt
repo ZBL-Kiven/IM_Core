@@ -1,6 +1,5 @@
 package com.zj.im.utils.log.logger
 
-import android.app.Application
 import java.io.*
 import java.lang.IllegalArgumentException
 import java.util.zip.ZipEntry
@@ -72,8 +71,11 @@ class FileUtils private constructor(private val homePath: String) {
                 val sb = StringBuilder()
                 val read = InputStreamReader(fis, "UTF-8")// 考虑到编码格式
                 val bufferedReader = BufferedReader(read)
-                var lineTxt: String? = null
-                while ({ lineTxt = bufferedReader.readLine();lineTxt }() != null) {
+                var lineTxt: String?
+                while (run {
+                        lineTxt = bufferedReader.readLine()
+                        lineTxt
+                    } != null) {
                     sb.append(lineTxt)
                 }
                 String(sb)
@@ -139,8 +141,8 @@ class FileUtils private constructor(private val homePath: String) {
     }
 
     private fun delete(path: String): Boolean {
-        val file: File? = File(path)
-        return if (file != null && file.isFile) {
+        val file = File(path)
+        return if (file.isFile) {
             file.delete()
         } else false
     }
@@ -153,9 +155,8 @@ class FileUtils private constructor(private val homePath: String) {
 
         private var DISK: String = ""
 
-        fun init(appContext: Application?, diskPathName: String): FileUtils {
-            DISK = appContext?.externalCacheDir?.absolutePath + File.separator
-            return FileUtils(DISK + diskPathName)
+        fun init(diskPathName: String): FileUtils {
+            return FileUtils(diskPathName)
         }
 
         fun getHomePath(path: String): String {
@@ -195,9 +196,12 @@ class FileUtils private constructor(private val homePath: String) {
                     BufferedInputStream(FileInputStream(file)).use { bis ->
                         val zipEntry = ZipEntry(parentPath + file.name)
                         zos.putNextEntry(zipEntry)
-                        var len: Int = -1
+                        var len: Int
                         val buffer = ByteArray(1024)
-                        while ({ len = bis.read(buffer, 0, buffer.size);len }() != -1) {
+                        while (run {
+                                len = bis.read(buffer, 0, buffer.size)
+                                len
+                            } != -1) {
                             zos.write(buffer, 0, len)
                             zos.flush()
                         }
@@ -212,8 +216,8 @@ class FileUtils private constructor(private val homePath: String) {
         private fun deleteDir(dir: File): Boolean {
             if (dir.isDirectory) {
                 val children = dir.list() ?: return true
-                for (i in 0 until children.size) {
-                    val success = deleteDir(File(dir, children[i]))
+                for (element in children) {
+                    val success = deleteDir(File(dir, element))
                     if (!success) {
                         return false
                     }

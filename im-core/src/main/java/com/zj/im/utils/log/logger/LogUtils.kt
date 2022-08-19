@@ -2,7 +2,6 @@
 
 package com.zj.im.utils.log.logger
 
-import com.zj.im.BuildConfig
 import com.zj.im.utils.now
 import com.zj.im.utils.today
 
@@ -13,16 +12,38 @@ import com.zj.im.utils.today
  *
  * collectionAble = auto
  * */
-internal val logUtils = object : LogCollectionUtils.Config() {
+private val logUtils = object : LogCollectionUtils.Config() {
 
     override fun overriddenFolderName(folderName: String): String {
-        return "$folderName/tcpStatus"
+        return "$folderName/ConnectionStatus"
     }
 
     override val subPath: () -> String
         get() = { today() }
     override val fileName: () -> String
         get() = { now() }
+}
+
+private val errorCollector = object : LogCollectionUtils.Config() {
+
+    override fun overriddenFolderName(folderName: String): String {
+        return "$folderName/ErrorLogs"
+    }
+
+    override val subPath: () -> String
+        get() = { today() }
+    override val fileName: () -> String
+        get() = { now() }
+}
+
+fun initLogCollectors(diskPathName: String, debugEnable: Boolean, logsCollectionAble: () -> Boolean, logsMaxRetain: Long) {
+    logUtils.init(diskPathName, debugEnable, logsCollectionAble, logsMaxRetain)
+    errorCollector.init(diskPathName, debugEnable, logsCollectionAble, logsMaxRetain)
+    NetRecordUtils.init(diskPathName, debugEnable, logsCollectionAble, logsMaxRetain)
+}
+
+internal fun i(where: String, s: String) {
+    logUtils.i(where, s)
 }
 
 internal fun e(where: String, s: String) {
@@ -37,6 +58,10 @@ internal fun w(where: String, s: String) {
     logUtils.w(where, s)
 }
 
-internal fun printInFile(where: String, s: String?) {
-    logUtils.printInFile(where, s, true)
+internal fun printInFile(where: String, s: String?, append: Boolean = true) {
+    logUtils.printInFile(where, s, append)
+}
+
+internal fun printErrorInFile(where: String, s: String?, append: Boolean = true) {
+    errorCollector.printErrorInFile(where, s, append)
 }

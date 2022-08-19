@@ -18,7 +18,7 @@ import java.lang.NullPointerException
 sealed class LogCollectionUtils {
 
     companion object {
-        const val TAG = "com.zj.LogUtils:println %s"
+        const val TAG = "com.zj.im-core:%s"
     }
 
     private var subPath: () -> String = { today() }
@@ -26,8 +26,8 @@ sealed class LogCollectionUtils {
     private var debugEnable: Boolean = false
     private var collectionAble: () -> Boolean = { false }
 
-    private fun init(appContext: Application?, folderName: String, subPath: () -> String, fileName: () -> String, debugEnable: Boolean, collectionAble: (() -> Boolean)?, maxRetain: Long) {
-        fileUtils = FileUtils.init(appContext, folderName)
+    protected fun init(folderName: String, subPath: () -> String, fileName: () -> String, debugEnable: Boolean, collectionAble: (() -> Boolean)?, maxRetain: Long) {
+        fileUtils = FileUtils.init(folderName)
         this.subPath = subPath
         this.fileName = fileName
         this.debugEnable = debugEnable
@@ -38,6 +38,12 @@ sealed class LogCollectionUtils {
     private var fileUtils: FileUtils? = null
 
     private fun getTag(what: String?) = String.format(TAG, what)
+
+    fun i(where: String, s: String?) {
+        if (debugEnable) {
+            Log.i(getTag(ErrorType.I.errorName), getLogText(where, s))
+        }
+    }
 
     fun d(where: String, s: String?) {
         if (debugEnable) {
@@ -57,12 +63,22 @@ sealed class LogCollectionUtils {
         }
     }
 
-    @Suppress("unused")
     fun printInFile(where: String, s: String?, append: Boolean) {
         val type = ErrorType.D
         val txt = getLogText(where, s)
         if (debugEnable) {
             Log.d(getTag(type.errorName), txt)
+        }
+        if (collectionAble()) {
+            onLogCollection(type, txt, append)
+        }
+    }
+
+    fun printErrorInFile(where: String, s: String?, append: Boolean) {
+        val type = ErrorType.E
+        val txt = getLogText(where, s)
+        if (debugEnable) {
+            Log.e(getTag(type.errorName), txt)
         }
         if (collectionAble()) {
             onLogCollection(type, txt, append)
@@ -89,8 +105,8 @@ sealed class LogCollectionUtils {
         fileUtils?.save(subPath(), fileName(), " \n type:${type.errorName} : on  ${nio()}:$log ", append)
     }
 
-    protected fun write(what: String?, append: Boolean = true) {
-        fileUtils?.save(subPath(), fileName(), what ?: "", append)
+    protected fun write(what: String?) {
+        fileUtils?.save(subPath(), fileName(), what ?: "", false)
     }
 
     open fun removeAble(): Boolean {
@@ -114,8 +130,8 @@ sealed class LogCollectionUtils {
         }
     }
 
-    private enum class ErrorType(internal var errorName: String?) {
-        E("ERROR"), D("DEBUG"), W("WARMING")
+    private enum class ErrorType(var errorName: String?) {
+        E("ERROR"), D("DEBUG"), W("WARMING"), I("INFO")
     }
 
     abstract class Config : LogCollectionUtils() {
@@ -134,18 +150,18 @@ sealed class LogCollectionUtils {
         /**
          * must call init() before use
          * */
-        fun init(appContext: Application?, folderName: String, debugEnable: Boolean, collectionAble: () -> Boolean, logsMaxRetain: Long) {
+        fun init(folderName: String, debugEnable: Boolean, collectionAble: () -> Boolean, logsMaxRetain: Long) {
             if (collectionAble.invoke() && folderName.isEmpty()) {
                 throw NullPointerException(Constance.LOG_FILE_NAME_EMPTY_ERROR)
             }
             this.collectionAble = collectionAble
             this.maxRetain = logsMaxRetain
             this.debugEnable = debugEnable
-            initConfig(appContext, overriddenFolderName(folderName))
+            initConfig(overriddenFolderName(folderName))
         }
 
-        private fun initConfig(appContext: Application?, folderName: String) {
-            super.init(appContext, folderName, subPath, fileName, debugEnable, collectionAble, maxRetain)
+        private fun initConfig(folderName: String) {
+            super.init(folderName, subPath, fileName, debugEnable, collectionAble, maxRetain)
             prepare()
         }
     }

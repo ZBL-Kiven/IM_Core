@@ -69,6 +69,7 @@ internal class DataStore<T> {
             MessageHandleType.LAYER_CHANGED -> {
                 simpleStatusFound.add(info)
             }
+            else -> {}
         }
         return getTotal()
     }

@@ -3,6 +3,7 @@
 package com.zj.im.utils
 
 import com.zj.im.chat.exceptions.ParamPathNotFoundException
+import com.zj.im.main.dispatcher.DataReceivedDispatcher
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -152,7 +153,7 @@ internal class CustomList<OUT> {
 
     fun removeIf(predicate: (other: OUT) -> Boolean) {
         lst.runSync { lst ->
-            if (!lst.isNullOrEmpty()) {
+            if (lst.isNotEmpty()) {
                 val each = lst.iterator()
                 while (each.hasNext()) {
                     if (predicate(each.next())) {
@@ -165,7 +166,7 @@ internal class CustomList<OUT> {
 
     fun forEachSafely(block: (MutableIterator<OUT>) -> Unit) {
         lst.runSync { lst ->
-            if (!lst.isNullOrEmpty()) {
+            if (lst.isNotEmpty()) {
                 val each = lst.iterator()
                 while (each.hasNext()) {
                     block(each)
@@ -233,11 +234,11 @@ internal class CustomList<OUT> {
     }
 
     fun isNotEmpty(): Boolean {
-        return !lst.isNullOrEmpty()
+        return lst.isNotEmpty()
     }
 
     fun isEmpty(): Boolean {
-        return lst.isNullOrEmpty()
+        return lst.isEmpty()
     }
 }
 
@@ -326,4 +327,29 @@ fun getIncrementKey(): String {
 
 fun getIncrementNumber(): Double {
     return getIncrementKey().toDouble()
+}
+
+
+internal fun <R> catching(run: () -> R?): R? {
+    return try {
+        run()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        DataReceivedDispatcher.postError(e);null
+    } catch (e: java.lang.Exception) {
+        e.printStackTrace()
+        DataReceivedDispatcher.postError(e);null
+    }
+}
+
+internal fun <R> catching(run: () -> R?, deal: (() -> R?)? = null): R? {
+    return try {
+        run()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        DataReceivedDispatcher.postError(e);deal?.invoke()
+    } catch (e: java.lang.Exception) {
+        e.printStackTrace()
+        DataReceivedDispatcher.postError(e);deal?.invoke()
+    }
 }

@@ -18,6 +18,7 @@ internal class EventHub<T> {
             MessageHandleType.NETWORK_STATE -> DataReceivedDispatcher.onNetworkStateChanged(data.netWorkState)
             MessageHandleType.SEND_PROGRESS_CHANGED -> DataReceivedDispatcher.onSendingProgress(data.callId, data.progress)
             MessageHandleType.LAYER_CHANGED -> DataReceivedDispatcher.onLayerChanged(data.isHidden)
+            else -> {}
         }
     }
 }

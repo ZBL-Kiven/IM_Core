@@ -49,6 +49,7 @@ public class ProcessUtil {
         return null;
     }
 
+    @SuppressWarnings("RedundantCast")
     private static String getCurrentProcessNameByActivityThread() {
         String processName = null;
         try {

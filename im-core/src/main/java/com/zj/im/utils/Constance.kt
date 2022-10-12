@@ -6,9 +6,11 @@ internal object Constance {
 
     const val LOOPER_EFFICIENCY = "the looper change runtime efficiency to %s!"
 
-    const val CONNECT_ERROR = "connection error , unable to connect to server!"
+    const val CONNECT_ERROR = "connection error , unable to connect to server case :\n"
 
     const val LOG_FILE_NAME_EMPTY_ERROR = "must set a log path with open the log collectors!"
+
+    const val PING_TIMEOUT = "reconnection because the ping was no response too many times!"
 
     const val FOLDER_NAME = "${BuildConfig.LIBRARY_PACKAGE_NAME}_IM"
 

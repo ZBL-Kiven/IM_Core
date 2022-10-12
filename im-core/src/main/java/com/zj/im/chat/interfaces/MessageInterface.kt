@@ -19,7 +19,7 @@ abstract class MessageInterface<T> {
         private var msgObservers = ConcurrentHashMap<Any, UIOptions<*, *>>()
 
         internal fun putAnObserver(option: UIOptions<*, *>) {
-            if (!msgObservers.isNullOrEmpty()) {
+            if (msgObservers.isNotEmpty()) {
                 val last = msgObservers[option.getUnique()]
                 if (last != null) {
                     option.hasPendingCount++

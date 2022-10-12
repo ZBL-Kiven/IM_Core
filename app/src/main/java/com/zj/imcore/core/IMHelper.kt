@@ -4,6 +4,7 @@ import com.zj.im.chat.exceptions.IMException
 import com.zj.im.chat.hub.ClientHub
 import com.zj.im.chat.hub.ServerHub
 import com.zj.im.chat.poster.UICreator
+import com.zj.im.fetcher.BaseFetcher
 import com.zj.im.main.impl.IMInterface
 import com.zj.imcore.bean.QueryInfo
 

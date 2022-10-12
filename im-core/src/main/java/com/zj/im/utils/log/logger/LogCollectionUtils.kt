@@ -1,6 +1,6 @@
 package com.zj.im.utils.log.logger
 
-import android.app.Application
+
 import android.util.Log
 import com.zj.im.utils.Constance
 import com.zj.im.utils.nio

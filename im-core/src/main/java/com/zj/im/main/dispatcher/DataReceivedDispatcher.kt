@@ -4,6 +4,7 @@ import com.zj.im.chat.enums.SendMsgState
 import com.zj.im.chat.enums.ConnectionState
 import com.zj.im.chat.modle.BaseMsgInfo
 import com.zj.im.chat.modle.IMLifecycle
+import com.zj.im.fetcher.BaseFetcher
 import com.zj.im.utils.netUtils.NetWorkInfo
 import com.zj.im.main.ChatBase
 import com.zj.im.main.StatusHub
@@ -22,6 +23,10 @@ internal object DataReceivedDispatcher {
         this.chatBase = chatBase
     }
 
+    fun reconnect(case: String) {
+        chatBase?.reconnect(case)
+    }
+
     fun <T> pushData(data: BaseMsgInfo<T>) {
         chatBase?.enqueue(data)
     }
@@ -30,12 +35,20 @@ internal object DataReceivedDispatcher {
         chatBase?.sendTo(data)
     }
 
-    fun postError(throwable: Throwable) {
+    fun postError(throwable: Throwable?) {
         chatBase?.postError(throwable)
     }
 
     fun onLayerChanged(isHidden: Boolean) {
         chatBase?.onAppLayerChanged(isHidden)
+    }
+
+    fun pauseIMLooper(case: String) {
+        chatBase?.pauseIMLooper(case)
+    }
+
+    fun resumeIMLooper(case: String) {
+        chatBase?.pauseIMLooper(case)
     }
 
     fun checkNetWork(alwaysCheck: Boolean) {
@@ -96,5 +109,9 @@ internal object DataReceivedDispatcher {
 
     fun onSendingProgress(callId: String, progress: Int) {
         getClient("on sending progress update")?.progressUpdate(progress, callId)
+    }
+
+    fun getFetcherTasks(): Array<BaseFetcher>? {
+        return chatBase?.getFetcherTasks()
     }
 }

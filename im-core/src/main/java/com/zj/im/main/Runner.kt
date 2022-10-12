@@ -9,6 +9,7 @@ import com.zj.im.chat.exceptions.LooperInterruptedException
 import com.zj.im.chat.hub.ClientHub
 import com.zj.im.chat.hub.ServerHub
 import com.zj.im.chat.modle.BaseMsgInfo
+import com.zj.im.fetcher.BaseFetcher
 import com.zj.im.main.dispatcher.DataReceivedDispatcher
 import com.zj.im.main.dispatcher.EventHub
 import com.zj.im.main.impl.IMInterface
@@ -104,10 +105,26 @@ internal abstract class Runner<T> : RunningObserver(), RunnerClientStub<T>, Send
         return imi?.getServer(case)
     }
 
+    fun getFetcherTasks(): Array<BaseFetcher>? {
+        return imi?.getFetcherTasks()
+    }
+
+    fun pauseIMLooper(case: String) {
+        imi?.pause(case)
+    }
+
+    fun resumeIMLooper(case: String) {
+        imi?.resume(case)
+    }
+
     fun <R> sendTo(data: BaseMsgInfo<R>) {
         cast<BaseMsgInfo<R>, BaseMsgInfo<T>>(data)?.let {
             sendingPool?.push(it)
         }
+    }
+
+    fun reconnect(case: String) {
+        imi?.reconnect(case)
     }
 
     override fun onLooperPrepared(queue: MsgHandlerQueue) {

@@ -21,6 +21,9 @@ import com.zj.im.chat.modle.BaseMsgInfo
 import com.zj.im.chat.modle.RouteInfo
 import com.zj.im.chat.poster.*
 import com.zj.im.chat.poster.ObserverIn
+import com.zj.im.fetcher.BaseFetcher
+import com.zj.im.fetcher.FetchResultRunner
+import com.zj.im.fetcher.Fetcher
 import com.zj.im.main.ChatBase
 import com.zj.im.main.StatusHub
 import com.zj.im.sender.CustomSendingCallback
@@ -117,6 +120,7 @@ abstract class IMInterface<T> : MessageInterface<T>(), ObserverIn {
 
     open fun initIMSdk(option: IMOption) {
         this.option = option
+        Fetcher.init(this)
         baseConnectionService?.let {
             it.init(this)
             return
@@ -240,6 +244,10 @@ abstract class IMInterface<T> : MessageInterface<T>(), ObserverIn {
 
     open fun onServiceDisConnected() {}
 
+    open fun getFetcherTasks(): Array<BaseFetcher>? {
+        return null
+    }
+
     /**
      * send a msg ，see [RunnerClientStub.sendMsg]
      * */
@@ -278,6 +286,14 @@ abstract class IMInterface<T> : MessageInterface<T>(), ObserverIn {
 
     fun resume(code: String): Boolean {
         return getClient("IMInterface.resume")?.resume(code) ?: false
+    }
+
+    fun refreshFetcher(fetcher: BaseFetcher, result: FetchResultRunner) {
+        Fetcher.refresh(fetcher, result)
+    }
+
+    fun cancelAllFetcher() {
+        Fetcher.cancelAll()
     }
 
     /**

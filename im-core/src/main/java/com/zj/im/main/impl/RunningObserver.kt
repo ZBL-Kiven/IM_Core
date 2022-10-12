@@ -1,7 +1,6 @@
 package com.zj.im.main.impl
 
 import android.app.Service
-import android.os.Looper
 import com.zj.im.main.looper.MsgHandlerQueue
 
 /**

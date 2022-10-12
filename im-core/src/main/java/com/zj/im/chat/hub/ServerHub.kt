@@ -9,6 +9,7 @@ import com.zj.im.main.StatusHub
 import com.zj.im.main.dispatcher.DataReceivedDispatcher
 import com.zj.im.main.looper.MsgExecutor
 import com.zj.im.main.looper.MsgHandlerQueue
+import com.zj.im.utils.Constance
 import com.zj.im.utils.log.logger.NetRecordUtils
 import com.zj.im.utils.log.logger.printErrorInFile
 import com.zj.im.utils.log.logger.printInFile
@@ -25,8 +26,6 @@ import java.util.concurrent.atomic.AtomicInteger
 abstract class ServerHub<T> constructor(private var isAlwaysHeartBeats: Boolean = false) {
 
     companion object {
-        private const val PING_TIMEOUT = "reconnection because the ping was no response too many times!"
-        private const val RECONNECTION_TIME = 3000L
         private const val HEART_BEATS_BASE_TIME = 3000L
         private const val CONNECT_STATE_CHANGE = 0xf1379
         var currentConnectId: String = ""; private set
@@ -44,7 +43,7 @@ abstract class ServerHub<T> constructor(private var isAlwaysHeartBeats: Boolean 
     open val heartbeatsMaxInterval = HEART_BEATS_BASE_TIME * 10f
     private var curPingCount: AtomicInteger = AtomicInteger(0)
     private var heartbeatsTime = HEART_BEATS_BASE_TIME
-    open val reconnectionTime = RECONNECTION_TIME
+    open val reconnectionTime = Constance.DEFAULT_RECONNECT_TIME
     private var handler: MsgExecutor? = null
 
     val isNetWorkAccess: Boolean
@@ -111,7 +110,12 @@ abstract class ServerHub<T> constructor(private var isAlwaysHeartBeats: Boolean 
                 is ConnectionState.CONNECTION -> {
                     curConnectionState = ConnectionState.CONNECTION(true)
                     currentConnectId = UUID.randomUUID().toString()
-                    connect(currentConnectId)
+                    try {
+                        connect(currentConnectId)
+                    } catch (e: Exception) {
+                        printInFile("ServerHub.connect", "${Constance.CONNECT_ERROR}${e.message}", true)
+                        tryToReConnect("Error:${e.message}")
+                    }
                 }
                 is ConnectionState.PING -> {
                     onCalledPing()
@@ -163,9 +167,6 @@ abstract class ServerHub<T> constructor(private var isAlwaysHeartBeats: Boolean 
         handler?.enqueue(ConnectionState.ERROR(case, reconAble))
     }
 
-    /**
-     * 发送的错误信息最终将回送至
-     * */
     protected fun postError(case: String) {
         postError(IMException(case))
     }
@@ -259,7 +260,7 @@ abstract class ServerHub<T> constructor(private var isAlwaysHeartBeats: Boolean 
             pingHasNotResponseCount++
         }
         if (pingHasNotResponseCount > 3) {
-            postToClose(PING_TIMEOUT, true)
+            postToClose(Constance.PING_TIMEOUT, true)
             clearPingRecord()
             return
         } else {

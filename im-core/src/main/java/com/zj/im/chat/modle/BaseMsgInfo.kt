@@ -116,7 +116,7 @@ internal class BaseMsgInfo<T> private constructor() {
                 this.callId = callId
                 this.timeOut = timeOut
                 this.isResend = isResend
-                if (!sendBefore.isNullOrEmpty()) {
+                if (sendBefore.isNotEmpty()) {
                     onSendBefore = LinkedBlockingQueue()
                     this.onSendBefore?.addAll(sendBefore)
                 }

@@ -10,7 +10,7 @@ import kotlin.coroutines.resume
 abstract class BaseFetcher {
 
     abstract fun getPayload(): String
-    abstract suspend fun startFetch(): FetchResult
+    abstract suspend fun onStartFetch(): FetchResult
 
     private var selfInFetching = false
     private var reqProp: FetchType? = null
@@ -50,12 +50,12 @@ abstract class BaseFetcher {
                 prop.dealCls?.let {
                     it.reqProp = prop
                     MainScope().launch {
-                        val r = CoroutineScope(Dispatchers.IO).async {
+                        val r = CoroutineScope(Dispatchers.IO).async<FetchResult> {
                             suspendCancellableCoroutine { sc ->
                                 prop.compo = sc
                                 catching {
                                     this.launch {
-                                        sc.resume(it.startFetch())
+                                        sc.resume(it.onStartFetch())
                                     }
                                 }
                             }

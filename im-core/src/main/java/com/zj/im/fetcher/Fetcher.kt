@@ -23,7 +23,7 @@ internal object Fetcher {
             when (it) {
                 is ConnectionState.CONNECTED -> {
                     DataReceivedDispatcher.pauseIMLooper(OFFLINE_FETCHER)
-                    BaseFetcher.startFetch() //NotificationFetcher
+                    BaseFetcher.startFetch(*tasks) //NotificationFetcher
                 }
                 is ConnectionState.ERROR, is ConnectionState.OFFLINE -> {
                     cancelAll()

@@ -161,7 +161,14 @@ internal class UIOptions<T : Any, R : Any>(private val uniqueCode: Any, private 
         if (dataHandler == null) {
             val cls = creator.handlerCls
             val rowType = (cls as? ParameterizedType)?.actualTypeArguments
-            if (cls != null && cls !is DataHandler<*> && (rowType == null || !rowType[0].equals(data::class))) {
+            val sameOfTransfer = if (cls == null) {
+                false
+            } else if (cls.isInterface) {
+                cls is DataHandler<*>
+            } else {
+                cls.interfaces.contains(DataHandler::class.java)
+            }
+            if (cls != null && !sameOfTransfer && (rowType == null || !rowType[0].equals(data::class))) {
                 throw IllegalArgumentException("Transform classes must be inherited from DataHandler<${data::class.java.simpleName}>")
             }
             dataHandler = cast(cls?.newInstance())

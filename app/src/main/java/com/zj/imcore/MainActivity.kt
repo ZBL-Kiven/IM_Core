@@ -15,7 +15,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        IMHelper.initIMSdk(IMOption.create(this.application).logsCollectionAble { true }.logsFileName(getExternalFilesDir(null)?.path ?: "").setLogsMaxRetain(86400000L).debug().setLevel(RuntimeEfficiency.HIGH).setNotify(Notification()).setSessionId(0x1).build())
+        IMHelper.initIMSdk(IMOption.create(this.application).logsCollectionAble { true }.logsFilePath(getExternalFilesDir(null)?.path ?: "").setLogsMaxRetain(86400000L).debug().setLevel(RuntimeEfficiency.HIGH).setNotify(Notification()).setSessionId(0x1).build())
         initData()
     }
 

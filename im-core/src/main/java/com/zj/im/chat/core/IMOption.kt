@@ -22,7 +22,7 @@ import com.zj.im.chat.enums.RuntimeEfficiency
  * @param logsCollectionAble set is need collection runtime logs , {@link logsFileName} and saved in somewhere
  */
 
-class IMOption internal constructor(val context: Application, val notification: Notification? = null, val sessionId: Int?, val runtimeEfficiency: RuntimeEfficiency, val logsCollectionAble: () -> Boolean, val logsFileName: String, val logsMaxRetain: Long, val debugEnable: Boolean) {
+class IMOption internal constructor(val context: Application, val notification: Notification? = null, val sessionId: Int?, val runtimeEfficiency: RuntimeEfficiency, val logsCollectionAble: () -> Boolean, val logsFilePath: String, val logsMaxRetain: Long, val debugEnable: Boolean) {
 
     companion object {
         @Suppress("unused")

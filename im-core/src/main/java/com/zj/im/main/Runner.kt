@@ -79,7 +79,7 @@ internal abstract class Runner<T> : RunningObserver(), RunnerClientStub<T>, Send
             val debugEnable = it.option?.debugEnable ?: false
             val logsCollectionAble = it.option?.logsCollectionAble ?: { false }
             val logsMaxRetain = it.option?.logsMaxRetain ?: Constance.MAX_RETAIN_TCP_LOG
-            diskPathName = it.option?.logsFileName ?: ""
+            diskPathName = it.option?.logsFilePath ?: ""
             initLogCollectors(diskPathName, debugEnable, logsCollectionAble, logsMaxRetain)
         }
     }

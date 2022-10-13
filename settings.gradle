@@ -33,6 +33,6 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "UtownIM"
+rootProject.name = "IM-Core"
 include ':app'
 include ':im-core'

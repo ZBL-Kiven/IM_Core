@@ -50,17 +50,22 @@ abstract class BaseFetcher {
                 prop.dealCls?.let {
                     it.reqProp = prop
                     MainScope().launch {
-                        val r = CoroutineScope(Dispatchers.IO).async<FetchResult> {
+                        val r = CoroutineScope(Dispatchers.IO).async<FetchResult?> {
                             suspendCancellableCoroutine { sc ->
                                 prop.compo = sc
                                 catching {
                                     this.launch {
-                                        sc.resume(it.onStartFetch())
+                                        val r = try {
+                                            it.onStartFetch()
+                                        } catch (e: Exception) {
+                                            it.cancel(e);null
+                                        }
+                                        sc.resume(r)
                                     }
                                 }
                             }
                         }
-                        prop.dealCls?.finishFetch(prop, r.await())
+                        r.await()?.let { d -> prop.dealCls?.finishFetch(prop, d) }
                     }
                 }
             }, {

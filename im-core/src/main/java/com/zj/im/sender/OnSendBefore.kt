@@ -9,20 +9,30 @@ abstract class OnSendBefore<T> : OnStatus<T> {
     private lateinit var callId: String
     private lateinit var onStatus: OnPendingStatus<T>
 
+
     internal fun onCall(callId: String, data: T?, onStatus: OnPendingStatus<T>) {
         this.onStatus = onStatus
         this.callId = callId
         call(callId, data)
     }
 
+    /**
+     * @see [OnStatus.success]
+     * */
     final override fun success(data: T) {
         onStatus.call(this.callId, data)
     }
 
+    /**
+     * @see [OnStatus.error]
+     * */
     final override fun error(data: T?, e: Throwable?, payloadInfo: Any?) {
         onStatus.error(this.callId, data, e, payloadInfo)
     }
 
+    /**
+     * @see [OnStatus.onProgress]
+     * */
     final override fun onProgress(progress: Int) {
         onStatus.onProgress(this.callId, progress)
     }

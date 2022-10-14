@@ -15,10 +15,10 @@ internal class SendingPool<T> : OnPendingStatus<T> {
 
     private var sending = false
 
-    private val sendMsgQueue = cusListOf<BaseMsgInfo<T>>()
+    private val pendingTaskQueue = cusListOf<BaseMsgInfo<T>>()
 
     fun push(info: BaseMsgInfo<T>) {
-        sendMsgQueue.add(info)
+        pendingTaskQueue.add(info)
         if (info.onSendBefore.isNullOrEmpty().not()) {
             info.onSendBefore?.poll()?.onCall(info.callId, info.data, this)
         }
@@ -34,27 +34,27 @@ internal class SendingPool<T> : OnPendingStatus<T> {
 
     fun pop(): BaseMsgInfo<T>? {
         if (sending) return null
-        if (sendMsgQueue.isEmpty()) return null
+        if (pendingTaskQueue.isEmpty()) return null
         if (!DataReceivedDispatcher.isDataEnable()) {
-            val grouped = sendMsgQueue.group {
+            val grouped = pendingTaskQueue.group {
                 it.ignoreConnecting
             } ?: return null
-            sendMsgQueue.clear()
-            sendMsgQueue.addAll(grouped[true])
+            pendingTaskQueue.clear()
+            pendingTaskQueue.addAll(grouped[true])
             grouped[false]?.forEach { ds ->
                 ds.joinInTop = true
                 DataReceivedDispatcher.pushData(ds)
             }
-            if (sendMsgQueue.isEmpty()) return null
+            if (pendingTaskQueue.isEmpty()) return null
         }
-        var firstInStay = sendMsgQueue.getFirst()
+        var firstInStay = pendingTaskQueue.getFirst()
         if (firstInStay?.sendingUp == SendingUp.WAIT) {
-            firstInStay = sendMsgQueue.getFirst {
+            firstInStay = pendingTaskQueue.getFirst {
                 it.sendingUp == SendingUp.NORMAL
             }
         }
         firstInStay?.let {
-            sendMsgQueue.remove(it)
+            pendingTaskQueue.remove(it)
             return it
         }
         return null
@@ -62,24 +62,24 @@ internal class SendingPool<T> : OnPendingStatus<T> {
 
     fun deleteFormQueue(callId: String?) {
         callId?.let {
-            sendMsgQueue.removeIf { m ->
+            pendingTaskQueue.removeIf { m ->
                 m.callId == callId
             }
         }
     }
 
     fun queryInSendingQueue(predicate: (BaseMsgInfo<T>) -> Boolean): Boolean {
-        return sendMsgQueue.contains(predicate)
+        return pendingTaskQueue.contains(predicate)
     }
 
     fun clear() {
-        sendMsgQueue.clear()
+        pendingTaskQueue.clear()
         sending = false
     }
 
     override fun call(callId: String, data: T) {
         printInFile("SendExecutors.send", "$callId before sending task success")
-        sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+        pendingTaskQueue.getFirst { obj -> obj.callId == callId }?.apply {
             this.data = data
             if (onSendBefore.isNullOrEmpty()) {
                 this.sendingUp = SendingUp.READY
@@ -102,7 +102,7 @@ internal class SendingPool<T> : OnPendingStatus<T> {
             }
             DataReceivedDispatcher.postError(ime)
         }
-        sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+        pendingTaskQueue.getFirst { obj -> obj.callId == callId }?.apply {
             if (data != null) this.data = data
             this.sendingUp = SendingUp.CANCEL
             this.onSendBefore?.clear()
@@ -112,7 +112,7 @@ internal class SendingPool<T> : OnPendingStatus<T> {
     }
 
     override fun onProgress(callId: String, progress: Int) {
-        sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+        pendingTaskQueue.getFirst { obj -> obj.callId == callId }?.apply {
             customSendingCallback?.let {
                 it.onSendingUploading(progress, sendWithoutState, callId)
                 if (it.pending) DataReceivedDispatcher.pushData(BaseMsgInfo.onProgressChange<T>(progress, callId))

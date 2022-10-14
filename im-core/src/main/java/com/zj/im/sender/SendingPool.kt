@@ -11,7 +11,7 @@ import com.zj.im.utils.log.logger.printInFile
 /**
  * Created by ZJJ
  */
-internal class SendingPool<T> : OnStatus<T> {
+internal class SendingPool<T> : OnPendingStatus<T> {
 
     private var sending = false
 
@@ -20,7 +20,7 @@ internal class SendingPool<T> : OnStatus<T> {
     fun push(info: BaseMsgInfo<T>) {
         sendMsgQueue.add(info)
         if (info.onSendBefore.isNullOrEmpty().not()) {
-            info.onSendBefore?.poll()?.call(this)
+            info.onSendBefore?.poll()?.onCall(info.callId, info.data, this)
         }
     }
 
@@ -80,14 +80,14 @@ internal class SendingPool<T> : OnStatus<T> {
     override fun call(callId: String, data: T) {
         printInFile("SendExecutors.send", "$callId before sending task success")
         sendMsgQueue.getFirst { obj -> obj.callId == callId }?.apply {
+            this.data = data
             if (onSendBefore.isNullOrEmpty()) {
                 this.sendingUp = SendingUp.READY
-                this.data = data
                 val sendState = SendMsgState.ON_SEND_BEFORE_END
                 val notifyState = BaseMsgInfo.sendingStateChange(sendState, callId, data, isResend, sendWithoutState)
                 DataReceivedDispatcher.pushData(notifyState)
             } else {
-                this.onSendBefore?.poll()?.call(this@SendingPool)
+                this.onSendBefore?.poll()?.onCall(this.callId, data, this@SendingPool)
             }
         }
     }

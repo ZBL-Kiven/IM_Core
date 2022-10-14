@@ -12,7 +12,7 @@ abstract class OnSendBefore<T> : OnStatus<T> {
     internal fun onCall(callId: String, data: T?, onStatus: OnPendingStatus<T>) {
         this.onStatus = onStatus
         this.callId = callId
-        call(data, this@OnSendBefore)
+        call(callId, data)
     }
 
     final override fun success(data: T) {
@@ -34,10 +34,13 @@ abstract class OnSendBefore<T> : OnStatus<T> {
      * so it is very suitable for message preprocessing ,
      * additional tasks in case of message file upload, session creation before sending, etc.
      *
-     * @param onStatus It needs to be called manually, except for [OnStatus.onProgress],
+     * @param callId It cannot be changed during message sending, so it is passed here but rejected in super.
+     *
+     * Call the method on handled.
+     * It needs to be called manually, as mark of the [OnStatus.onProgress],
      * it means the execution is completed, such as [OnStatus.success] [OnStatus.error]
      * */
-    abstract fun call(data: T?, onStatus: OnStatus<T>)
+    abstract fun call(callId: String, data: T?)
 
 }
 

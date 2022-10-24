@@ -48,7 +48,7 @@ internal object DataReceivedDispatcher {
     }
 
     fun resumeIMLooper(case: String) {
-        chatBase?.pauseIMLooper(case)
+        chatBase?.resumeIMLooper(case)
     }
 
     fun checkNetWork(alwaysCheck: Boolean) {

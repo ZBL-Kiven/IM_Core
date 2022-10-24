@@ -7,6 +7,9 @@ import com.zj.im.chat.interfaces.MessageInterface
 import com.zj.im.chat.modle.IMLifecycle
 import com.zj.im.main.StatusHub
 import com.zj.im.main.dispatcher.DataReceivedDispatcher
+import com.zj.im.utils.catching
+import com.zj.im.utils.cusListOf
+import com.zj.im.utils.log.logger.e
 import com.zj.im.utils.log.logger.printInFile
 
 /**
@@ -20,6 +23,8 @@ import com.zj.im.utils.log.logger.printInFile
 abstract class ClientHub<T> {
 
     var context: Application? = null; internal set
+
+    private val statusCaller = cusListOf<String>()
 
     /**
      * Called by the attached OnSendBefore mount task when sending a message.
@@ -78,15 +83,22 @@ abstract class ClientHub<T> {
     }
 
     internal fun pause(code: String): Boolean {
+        statusCaller.add(code)
         if (StatusHub.isPaused()) return false
         StatusHub.onLifecycle(IMLifecycle(LifeType.PAUSE, code))
         return true
     }
 
     internal fun resume(code: String): Boolean {
-        if (StatusHub.isRunning()) return false
-        StatusHub.onLifecycle(IMLifecycle(LifeType.RESUME, code))
-        return true
+        if (!statusCaller.contains(code)) {
+            e("ClientHub.resume", "the case $code is unused by func pause(), it can't resume any if queue is pausing!")
+        }
+        val invoke = catching {
+            statusCaller.remove(code)
+            if (statusCaller.isNotEmpty() || StatusHub.isRunning()) return@catching false
+            StatusHub.onLifecycle(IMLifecycle(LifeType.RESUME, code));true
+        }
+        return invoke ?: false
     }
 
     internal fun shutdown() {

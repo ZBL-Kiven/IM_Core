@@ -61,9 +61,8 @@ internal object Fetcher {
         d("Fetcher", " Fetch finished with last : ${prop.dealCls?.getPayload()}!!")
         if (result != null) {
             endOfRefresh(prop, result, false)
-        } else {
-            DataReceivedDispatcher.resumeIMLooper(OFFLINE_FETCHER)
         }
+        DataReceivedDispatcher.resumeIMLooper(OFFLINE_FETCHER)
     }
 
     fun endOfRefresh(prop: FetchType, result: FetchResult, formRefresh: Boolean = true) {

@@ -8,7 +8,6 @@ import com.zj.im.chat.modle.IMLifecycle
 import com.zj.im.main.StatusHub
 import com.zj.im.main.dispatcher.DataReceivedDispatcher
 import com.zj.im.utils.catching
-import com.zj.im.utils.cusListOf
 import com.zj.im.utils.log.logger.e
 import com.zj.im.utils.log.logger.printInFile
 
@@ -24,7 +23,7 @@ abstract class ClientHub<T> {
 
     var context: Application? = null; internal set
 
-    private val statusCaller = cusListOf<String>()
+    private val statusCaller = mutableSetOf<String>()
 
     /**
      * Called by the attached OnSendBefore mount task when sending a message.
@@ -95,8 +94,9 @@ abstract class ClientHub<T> {
         }
         val invoke = catching {
             statusCaller.remove(code)
-            if (statusCaller.isNotEmpty() || StatusHub.isRunning()) return@catching false
-            StatusHub.onLifecycle(IMLifecycle(LifeType.RESUME, code));true
+            if (statusCaller.isEmpty()) {
+                StatusHub.onLifecycle(IMLifecycle(LifeType.RESUME, code));true
+            } else StatusHub.isRunning()
         }
         return invoke ?: false
     }
